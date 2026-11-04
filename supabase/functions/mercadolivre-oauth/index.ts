@@ -105,8 +105,23 @@ Deno.serve(async (req: Request) => {
 
   const tokenPayload = await tokenResponse.json().catch(() => ({}));
   if (!tokenResponse.ok || !tokenPayload.access_token || !tokenPayload.refresh_token || !Number.isFinite(Number(tokenPayload.expires_in))) {
-    console.error("Mercado Livre token exchange failed", tokenResponse.status, tokenPayload.error ?? "invalid_token_response");
-    return html("Não foi possível autorizar", "O Mercado Livre não concluiu a autorização. Confira as credenciais e o endereço de retorno no painel.", 400);
+    // Log only provider diagnostics. Never log authorization codes, client secrets, or tokens.
+    const providerCode = typeof tokenPayload.error === "string" ? tokenPayload.error.slice(0, 100) : "invalid_token_response";
+    const providerMessage = typeof tokenPayload.message === "string"
+      ? tokenPayload.message.slice(0, 240)
+      : typeof tokenPayload.error_description === "string"
+        ? tokenPayload.error_description.slice(0, 240)
+        : "O provedor não informou detalhes adicionais.";
+    console.error("Mercado Livre token exchange failed", JSON.stringify({
+      http_status: tokenResponse.status,
+      error: providerCode,
+      message: providerMessage,
+    }));
+    return html(
+      "Não foi possível autorizar",
+      `O Mercado Livre recusou a troca do código (HTTP ${tokenResponse.status}). Código: ${providerCode}. Detalhe: ${providerMessage}`,
+      400,
+    );
   }
 
   const { data: configs, error: configError } = await admin
