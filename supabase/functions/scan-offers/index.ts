@@ -6,6 +6,29 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+type SearchConfig = {
+  user_id: string;
+  term: string;
+  max_price: number;
+  max_installments: number;
+};
+
+type MercadoLivreItem = {
+  id: string;
+  title: string;
+  price: number;
+  currency_id: string;
+  permalink: string;
+  thumbnail: string;
+  shipping?: { free_shipping?: boolean };
+  installments?: {
+    quantity?: number;
+    amount?: number;
+    rate?: number;
+    currency_id?: string;
+  } | null;
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -15,8 +38,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const authHeader = req.headers.get("authorization");
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
@@ -30,18 +52,92 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: configs, error } = await admin
+  const { data: configs, error: configError } = await admin
     .from("search_configs")
-    .select("user_id, term, max_price, max_installments, updated_at");
+    .select("user_id, term, max_price, max_installments");
 
-  if (error) {
+  if (configError) {
     return Response.json({ error: "Could not load search configurations" }, { status: 500, headers: corsHeaders });
   }
 
-  // Storefront connectors will be added in a later step. Do not report offers yet.
+  let checked = 0;
+  let saved = 0;
+  let rejected = 0;
+  const errors: string[] = [];
+
+  for (const config of (configs ?? []) as SearchConfig[]) {
+    const url = new URL("https://api.mercadolibre.com/sites/MLB/search");
+    url.searchParams.set("q", config.term);
+    url.searchParams.set("limit", "50");
+    url.searchParams.set("sort", "price_asc");
+
+    try {
+      const response = await fetch(url, {
+        headers: { "Accept": "application/json", "User-Agent": "RadarDePromocoes/1.0" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) {
+        errors.push(`Mercado Livre (${config.term}): HTTP ${response.status}`);
+        continue;
+      }
+
+      const payload = await response.json();
+      const items = (payload.results ?? []) as MercadoLivreItem[];
+      checked += items.length;
+      const offers = [];
+
+      for (const item of items) {
+        const freeShipping = item.shipping?.free_shipping === true;
+        const quantity = item.installments?.quantity ?? 1;
+        const installmentAmount = item.installments?.amount ?? item.price;
+        const installmentTotal = installmentAmount * quantity;
+        const totalPrice = Math.max(Number(item.price), Number(installmentTotal));
+
+        // Only accept a known free-shipping offer so the displayed total is not understated.
+        if (!freeShipping || quantity > config.max_installments || totalPrice > config.max_price) {
+          rejected++;
+          continue;
+        }
+
+        offers.push({
+          user_id: config.user_id,
+          source: "mercado_livre",
+          external_id: item.id,
+          title: item.title,
+          price: Number(item.price),
+          total_price: Number(totalPrice),
+          installments: quantity,
+          installment_amount: Number(installmentAmount),
+          currency: item.currency_id ?? "BRL",
+          url: item.permalink,
+          image_url: item.thumbnail,
+          free_shipping: true,
+          observed_at: new Date().toISOString(),
+        });
+      }
+
+      if (offers.length) {
+        const { error: saveError } = await admin.from("offers").upsert(offers, {
+          onConflict: "user_id,source,external_id",
+        });
+        if (saveError) {
+          errors.push(`Não foi possível salvar ofertas de ${config.term}: ${saveError.message}`);
+        } else {
+          saved += offers.length;
+        }
+      }
+    } catch (error) {
+      errors.push(`Falha na busca de ${config.term}: ${error instanceof Error ? error.message : "erro desconhecido"}`);
+    }
+  }
+
   return Response.json({
-    status: "connectors_pending",
+    status: errors.length ? "completed_with_warnings" : "completed",
+    sources: ["mercado_livre"],
     configurations_found: configs?.length ?? 0,
-    message: "Search configurations loaded. Store connectors are not active yet.",
+    items_checked: checked,
+    offers_saved: saved,
+    offers_rejected_by_filters: rejected,
+    errors,
   }, { headers: corsHeaders });
 });
