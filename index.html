@@ -24,7 +24,7 @@
  // Forward only OAuth callback parameters to the server-side function; never expose tokens here.
  const oauthParams=new URLSearchParams(window.location.search);
  if(oauthParams.has("code")||oauthParams.has("error")){
-   const destination=new URL("https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/mercadolivre-oauth");
+   const destination=new URL("https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/dynamic-function");
    for(const key of ["code","state","error","error_description"]){
      const value=oauthParams.get(key);
      if(value) destination.searchParams.set(key,value);
