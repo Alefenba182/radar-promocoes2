@@ -20,6 +20,18 @@
 <footer>Radar de Promoções · integração inicial</footer></main>
 <script>
 (function(){
+ // Mercado Livre was registered with this GitHub Pages root URL as its OAuth redirect.
+ // Forward only OAuth callback parameters to the server-side function; never expose tokens here.
+ const oauthParams=new URLSearchParams(window.location.search);
+ if(oauthParams.has("code")||oauthParams.has("error")){
+   const destination=new URL("https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/mercadolivre-oauth");
+   for(const key of ["code","state","error","error_description"]){
+     const value=oauthParams.get(key);
+     if(value) destination.searchParams.set(key,value);
+   }
+   window.location.replace(destination.toString());
+   return;
+ }
  const SUPABASE_URL="https://vektbwbqgffonwngvvkq.supabase.co";
  const SUPABASE_PUBLISHABLE_KEY="sb_publishable_vSprcrQwx-1PdCjD5NA9og_ZGtolBmx";
  const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);

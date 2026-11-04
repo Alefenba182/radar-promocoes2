@@ -1,37 +1,23 @@
 # Conexão OAuth do Mercado Livre
 
-Esta etapa adiciona o callback OAuth seguro. Ela ainda não altera o scanner; a integração da busca autenticada será feita depois que esta etapa estiver publicada.
+A aplicação do Mercado Livre já foi cadastrada com o Redirect URI da raiz do GitHub Pages:
 
-## 1. Criar as tabelas
+`https://alefenba182.github.io/radar-promocoes2/`
 
-No Supabase, abra **SQL Editor**, crie uma consulta, cole o conteúdo de `supabase/mercadolivre-oauth.sql` e execute.
+Não precisamos alterar a aplicação nem criar outra. O painel `index.html` detecta o retorno OAuth e encaminha somente os parâmetros (`code`, `state` e eventual erro) para a Edge Function. A troca do código e o Client Secret continuam exclusivamente no servidor.
 
-## 2. Criar a Edge Function
+## Ajustar o Secret
 
-Em **Edge Functions**, crie uma função chamada `mercadolivre-oauth`. No editor, substitua o conteúdo de `index.ts` pelo arquivo `supabase/functions/mercadolivre-oauth/index.ts` deste repositório e publique.
+Em **Supabase → Edge Functions → Secrets**, edite o secret existente `ML_REDIRECT_URI` para exatamente:
 
-Desative **Verify JWT with legacy secret** para essa função. O retorno do Mercado Livre chega pelo navegador sem JWT do Supabase; a função valida um state aleatório, de uso único e com validade de 10 minutos.
+`https://alefenba182.github.io/radar-promocoes2/`
 
-## 3. Cadastrar os secrets
+Mantenha `ML_CLIENT_ID` e `ML_CLIENT_SECRET` como estão.
 
-Em **Edge Functions → Secrets**, adicione:
+## Publicar
 
-- `ML_CLIENT_ID`: Client ID da aplicação do Mercado Livre.
-- `ML_CLIENT_SECRET`: Client Secret da aplicação. Não compartilhe este valor no chat.
-- `ML_REDIRECT_URI`: `https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/mercadolivre-oauth`
+Publique o `index.html` atualizado pelo GitHub Pages e substitua o código da Edge Function `mercadolivre-oauth` pelo arquivo do repositório. Mantenha **Verify JWT with legacy secret** desativado.
 
-O endereço precisa ser idêntico ao cadastrado no DevCenter do Mercado Livre. Não inclua `?action=start`.
+A função usa o Redirect URI original cadastrado no DevCenter para iniciar a autorização e trocar o código por tokens. O state aleatório, de uso único e com validade de 10 minutos continua validado no servidor.
 
-## 4. Atualizar o redirect URI no DevCenter
-
-Na aplicação do Mercado Livre, substitua o endereço antigo pelo valor de `ML_REDIRECT_URI` acima e salve.
-
-## 5. Autorizar
-
-Depois de executar o SQL, publicar a função e cadastrar os três secrets, abra no navegador:
-
-`https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/mercadolivre-oauth?action=start`
-
-Entre na conta do Mercado Livre e aceite a autorização. Ao final, a página deverá confirmar **Mercado Livre conectado!**
-
-Os tokens são gravados apenas no banco, sem acesso por usuários anon/authenticated. O Client Secret nunca vai para o navegador.
+Não inicie a autorização até que o painel e a função estejam publicados e o secret `ML_REDIRECT_URI` esteja atualizado.

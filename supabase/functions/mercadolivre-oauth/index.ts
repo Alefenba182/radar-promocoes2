@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const clientId = Deno.env.get("ML_CLIENT_ID");
   const clientSecret = Deno.env.get("ML_CLIENT_SECRET");
-  const redirectUri = Deno.env.get("ML_REDIRECT_URI");
+  // Must exactly match the Redirect URI already registered in the Mercado Livre app.\n  // The GitHub Pages callback forwards code/state to this server function.\n  const redirectUri = Deno.env.get("ML_REDIRECT_URI");
 
   if (!supabaseUrl || !serviceRoleKey || !clientId || !clientSecret || !redirectUri) {
     return html("Configuração incompleta", "O servidor ainda não recebeu todas as credenciais necessárias.", 500);
