@@ -147,6 +147,27 @@ Deno.serve(async (req: Request) => {
       searchUrl.searchParams.set("limit", "50");
       searchUrl.searchParams.set("sort", "price_asc");
 
+      // Verify the OAuth token separately from the catalog search endpoint.
+      // Only safe provider error fields are retained; account data and tokens are never logged.
+      const accountCheck = await fetch("https://api.mercadolibre.com/users/me", {
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          "User-Agent": "RadarDePromocoes/1.0",
+        },
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!accountCheck.ok) {
+        const diagnostic = await accountCheck.json().catch(() => ({})) as {
+          error?: string; message?: string;
+        };
+        errors.push(`Mercado Livre autenticação: /users/me HTTP ${accountCheck.status}` +
+          (diagnostic.error ? ` (${String(diagnostic.error).slice(0, 80)})` : "") +
+          (diagnostic.message ? ` — ${String(diagnostic.message).slice(0, 160)}` : ""));
+      } else {
+        errors.push("Diagnóstico Mercado Livre: /users/me OK; token OAuth aceito.");
+      }
+
       let response = await fetch(searchUrl, {
         headers: {
           "Accept": "application/json",
@@ -170,7 +191,12 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!response.ok) {
-        errors.push(`Mercado Livre (${config.term}): HTTP ${response.status}`);
+        const diagnostic = await response.json().catch(() => ({})) as {
+          error?: string; message?: string; status?: number;
+        };
+        errors.push(`Mercado Livre busca (${config.term}): HTTP ${response.status}` +
+          (diagnostic.error ? ` (${String(diagnostic.error).slice(0, 80)})` : "") +
+          (diagnostic.message ? ` — ${String(diagnostic.message).slice(0, 160)}` : ""));
         continue;
       }
 
