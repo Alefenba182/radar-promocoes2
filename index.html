@@ -105,15 +105,15 @@
      $("offers-status").textContent=
        `Busca ${data.status==="completed"?"concluída":"concluída com avisos"}: ${data.items_checked} anúncios analisados, ${data.offers_saved} ofertas salvas.`+
        (details.length?" "+details.join(" "):"");
-     await loadOffers();
+     await loadOffers(true);
    }catch(error){
      $("offers-status").textContent="Não foi possível executar a busca: "+(error.message||"verifique se a função está publicada.");
    }finally{$("scan").disabled=false;}
  }
- async function loadOffers(){
+ async function loadOffers(preserveStatus=false){
    if(!userId) return;
    $("refresh").disabled=true;
-   $("offers-status").textContent="Buscando ofertas salvas...";
+   if(!preserveStatus) $("offers-status").textContent="Buscando ofertas salvas...";
    try{
      const {data,error}=await client.from("offers")
        .select("title,total_price,installments,installment_amount,currency,url,image_url,free_shipping,observed_at")
@@ -122,7 +122,7 @@
        .limit(50);
      if(error) throw error;
      renderOffers(data||[]);
-     $("offers-status").textContent=data?.length
+     if(!preserveStatus) $("offers-status").textContent=data?.length
        ? `${data.length} oferta(s) salva(s). Última coleta: ${new Date(data[0].observed_at).toLocaleString("pt-BR")}.`
        : "Ainda não há ofertas salvas. A coleta automática será ativada após a configuração do agendador.";
    }catch(error){

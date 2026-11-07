@@ -47,6 +47,9 @@ class DashboardFeatureTests(unittest.TestCase):
 
     def test_dashboard_has_manual_scan_action(self):
         dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("async function loadOffers(preserveStatus=false)", dashboard)
+        self.assertIn("await loadOffers(true)", dashboard)
+        dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="scan"', dashboard)
         self.assertIn("Buscar ofertas agora", dashboard)
         self.assertIn('client.functions.invoke("scan-offers"', dashboard)
