@@ -15,7 +15,14 @@ const sha256 = async (value: string) => {
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== "GET") return html("Método não permitido", "Use o endereço de autorização no navegador.", 405);
+  const cors = {
+    "Access-Control-Allow-Origin": "https://alefenba182.github.io",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Cache-Control": "no-store",
+  };
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "GET" && req.method !== "POST") return html("Método não permitido", "Método não permitido.", 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -33,28 +40,46 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const requestUrl = new URL(req.url);
+  let action = requestUrl.searchParams.get("action");
+  let authenticatedUserId: string | null = null;
 
-  if (requestUrl.searchParams.get("action") === "status") {
-    const { data: configs } = await admin.from("search_configs").select("user_id").limit(1);
-    if (!configs?.length) return Response.json({ connected: false }, { headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
-    const { data: token } = await admin.from("mercadolivre_tokens").select("user_id").eq("user_id", configs[0].user_id).maybeSingle();
-    return Response.json({ connected: Boolean(token) }, { headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
+  if (req.method === "POST") {
+    const authorization = req.headers.get("authorization") ?? "";
+    const jwt = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+    if (!jwt) return Response.json({ error: "Sessão ausente." }, { status: 401, headers: cors });
+    const { data: authData, error: authError } = await admin.auth.getUser(jwt);
+    if (authError || !authData.user) return Response.json({ error: "Sessão inválida." }, { status: 401, headers: cors });
+    authenticatedUserId = authData.user.id;
+    const body = await req.json().catch(() => ({}));
+    action = body.action;
   }
-  if (requestUrl.searchParams.get("action") === "start") {
+
+  if (req.method === "POST" && action === "status") {
+    const { data: token, error } = await admin.from("mercadolivre_tokens")
+      .select("user_id").eq("user_id", authenticatedUserId).maybeSingle();
+    return Response.json({ connected: Boolean(token && !error) }, { headers: cors });
+  }
+
+  if (req.method === "POST" && action === "start") {
     const stateBytes = crypto.getRandomValues(new Uint8Array(32));
     const state = Array.from(stateBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
     const { error } = await admin.from("mercadolivre_oauth_states").insert({
       state_hash: await sha256(state),
+      user_id: authenticatedUserId,
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     });
-    if (error) return html("Não foi possível iniciar", "Tente novamente em alguns minutos.", 500);
+    if (error) return Response.json({ error: "Não foi possível iniciar a conexão." }, { status: 500, headers: cors });
 
     const authorizationUrl = new URL("https://auth.mercadolivre.com.br/authorization");
     authorizationUrl.searchParams.set("response_type", "code");
     authorizationUrl.searchParams.set("client_id", clientId);
     authorizationUrl.searchParams.set("redirect_uri", redirectUri);
     authorizationUrl.searchParams.set("state", state);
-    return Response.redirect(authorizationUrl.toString(), 302);
+    return Response.json({ authorization_url: authorizationUrl.toString() }, { headers: cors });
+  }
+
+  if (req.method === "GET" && action === "start") {
+    return html("Abra o Radar", "Inicie a conexão pelo botão dentro do painel atualizado.", 400);
   }
 
   const code = requestUrl.searchParams.get("code");
@@ -70,7 +95,7 @@ Deno.serve(async (req: Request) => {
   const stateHash = await sha256(state);
   const { data: stateRow, error: stateReadError } = await admin
     .from("mercadolivre_oauth_states")
-    .select("state_hash")
+    .select("state_hash,user_id")
     .eq("state_hash", stateHash)
     .gt("expires_at", new Date().toISOString())
     .is("used_at", null)
@@ -132,17 +157,13 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const { data: configs, error: configError } = await admin
-    .from("search_configs")
-    .select("user_id")
-    .limit(1);
-  if (configError || !configs?.length) {
-    return html("Configuração do Radar não encontrada", "Abra o painel do Radar e salve uma busca antes de conectar a loja.", 400);
+  if (!stateRow.user_id) {
+    return html("Autorização antiga", "Inicie a conexão novamente pelo botão do Radar atualizado.", 400);
   }
 
   const expiresAt = new Date(Date.now() + Number(tokenPayload.expires_in) * 1000).toISOString();
   const { error: saveError } = await admin.from("mercadolivre_tokens").upsert({
-    user_id: configs[0].user_id,
+    user_id: stateRow.user_id,
     access_token: tokenPayload.access_token,
     refresh_token: tokenPayload.refresh_token,
     expires_at: expiresAt,

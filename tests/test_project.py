@@ -29,6 +29,8 @@ class DashboardFeatureTests(unittest.TestCase):
         dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn("mercadolivre-oauth?action=start", dashboard)
         self.assertIn("Conectar Mercado Livre", dashboard)
+        self.assertIn('client.functions.invoke("mercadolivre-oauth",{body:{action:"start"}})', dashboard)
+        self.assertIn('client.functions.invoke("mercadolivre-oauth",{body:{action:"status"}})', dashboard)
         self.assertIn('id="ml-connection"', dashboard)
         self.assertIn("refreshMercadoLivreStatus", dashboard)
 

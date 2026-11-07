@@ -25,3 +25,8 @@ revoke all on public.mercadolivre_oauth_states from public, anon, authenticated;
 revoke all on public.mercadolivre_tokens from public, anon, authenticated;
 grant all on public.mercadolivre_oauth_states to service_role;
 grant all on public.mercadolivre_tokens to service_role;
+
+
+-- Vincula cada autorização à sessão autenticada que iniciou a conexão.
+alter table public.mercadolivre_oauth_states
+  add column if not exists user_id uuid references auth.users(id) on delete cascade;
