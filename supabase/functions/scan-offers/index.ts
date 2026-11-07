@@ -138,6 +138,7 @@ Deno.serve(async (req: Request) => {
   let saved = 0;
   let rejected = 0;
   const errors: string[] = [];
+  const diagnostics: string[] = [];
 
   for (const config of (configs ?? []) as SearchConfig[]) {
     try {
@@ -161,11 +162,11 @@ Deno.serve(async (req: Request) => {
         const diagnostic = await accountCheck.json().catch(() => ({})) as {
           error?: string; message?: string;
         };
-        errors.push(`Mercado Livre autenticação: /users/me HTTP ${accountCheck.status}` +
+        diagnostics.push(`Mercado Livre autenticação: /users/me HTTP ${accountCheck.status}` +
           (diagnostic.error ? ` (${String(diagnostic.error).slice(0, 80)})` : "") +
           (diagnostic.message ? ` — ${String(diagnostic.message).slice(0, 160)}` : ""));
       } else {
-        errors.push("Diagnóstico Mercado Livre: /users/me OK; token OAuth aceito.");
+        diagnostics.push("Diagnóstico Mercado Livre: /users/me OK; token OAuth aceito.");
       }
 
       let response = await fetch(searchUrl, {
@@ -258,5 +259,6 @@ Deno.serve(async (req: Request) => {
     offers_saved: saved,
     offers_rejected_by_filters: rejected,
     errors,
+    diagnostics,
   }, { headers: corsHeaders });
 });
