@@ -26,4 +26,4 @@ jobs:
             echo "::error::Configure o secret SUPABASE_ACCESS_TOKEN nas configurações do repositório."
             exit 1
           fi
-          supabase functions deploy scan-offers --project-ref vektbwbqgffonwngvvkq
+          supabase functions deploy scan-offers --project-ref vektbwbqgffonwngvvkq --yes
