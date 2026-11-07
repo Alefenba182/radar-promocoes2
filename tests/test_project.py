@@ -42,6 +42,19 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn("title.textContent=offer.title", dashboard)
         self.assertNotIn("innerHTML=offer.title", dashboard)
 
+
+    def test_dashboard_has_manual_scan_action(self):
+        dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="scan"', dashboard)
+        self.assertIn("Buscar ofertas agora", dashboard)
+        self.assertIn('client.functions.invoke("scan-offers"', dashboard)
+
+    def test_scanner_accepts_user_jwt_and_limits_manual_scan(self):
+        scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
+        self.assertIn("admin.auth.getUser(bearerToken)", scanner)
+        self.assertIn('configQuery.eq("user_id", requestedUserId)', scanner)
+        self.assertIn('bearerToken === cronSecret', scanner)
+
     def test_scheduler_is_configured_for_fifteen_minutes(self):
         scheduler = (ROOT / "supabase/schedule-scan.sql").read_text(encoding="utf-8")
         self.assertIn("'*/15 * * * *'", scheduler)
