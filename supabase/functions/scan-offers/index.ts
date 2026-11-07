@@ -46,7 +46,7 @@ type TokenPayload = {
 };
 
 
-type CatalogProduct = { id: string; name?: string; permalink?: string; pictures?: Array<{ url?: string }> };
+type CatalogProduct = { id: string; name?: string; permalink?: string; pictures?: Array<{ url?: string }>; children_ids?: string[] };
 type CatalogOffer = { item_id?: string; id?: string; title?: string; price?: number; currency_id?: string; permalink?: string; thumbnail?: string; shipping?: { free_shipping?: boolean }; installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null };
 type CatalogWinner = { item_id?: string; price?: number; currency_id?: string; seller_id?: number; shipping?: { free_shipping?: boolean } };
 
@@ -59,7 +59,8 @@ async function fetchProviderJson(url: URL | string, accessToken: string) {
   return { response, payload };
 }
 
-// Official catalog flow: search products, then read each product's buy_box_winner.
+// Search catalog products and inspect specific child products when a result is a parent.
+// Parent products are not purchasable; children contain the complete product specification.
 async function searchCatalogOffers(term: string, accessToken: string) {
   const searchUrl = new URL('https://api.mercadolibre.com/products/search');
   searchUrl.searchParams.set('status', 'active');
@@ -71,16 +72,41 @@ async function searchCatalogOffers(term: string, accessToken: string) {
   const products = (search.payload.results ?? []) as CatalogProduct[];
   const offers: CatalogOffer[] = [];
   const statuses: number[] = [];
+  let childProductsChecked = 0;
   for (const product of products.slice(0, 10)) {
     if (!product?.id) continue;
     const detail = await fetchProviderJson('https://api.mercadolibre.com/products/' + encodeURIComponent(product.id), accessToken);
     statuses.push(detail.response.status);
     if (!detail.response.ok) continue;
-    const winner = detail.payload.buy_box_winner as CatalogWinner | null;
-    if (!winner?.item_id || !product.permalink || !Number.isFinite(Number(winner.price))) continue;
-    offers.push({ ...winner, title: product.name || 'Produto do catálogo Mercado Livre', permalink: product.permalink, thumbnail: product.pictures?.[0]?.url });
+    const parentDetail = detail.payload as CatalogProduct & { buy_box_winner?: CatalogWinner | null };
+    const candidates: Array<CatalogProduct & { buy_box_winner?: CatalogWinner | null }> = [parentDetail];
+    for (const childId of (parentDetail.children_ids ?? []).slice(0, 10)) {
+      const child = await fetchProviderJson('https://api.mercadolibre.com/products/' + encodeURIComponent(childId), accessToken);
+      statuses.push(child.response.status);
+      childProductsChecked++;
+      if (child.response.ok) candidates.push(child.payload as CatalogProduct & { buy_box_winner?: CatalogWinner | null });
+    }
+    for (const candidate of candidates) {
+      const winner = candidate.buy_box_winner;
+      if (!winner?.item_id || !Number.isFinite(Number(winner.price))) continue;
+      const productUrl = candidate.permalink || product.permalink;
+      if (!productUrl) continue;
+      offers.push({
+        ...winner,
+        title: candidate.name || product.name || 'Produto do catálogo Mercado Livre',
+        permalink: productUrl,
+        thumbnail: candidate.pictures?.[0]?.url || product.pictures?.[0]?.url,
+      });
+    }
   }
-  return { checked: products.length, offers, diagnostic: 'fallback catálogo oficial: ' + products.length + ' produto(s); /products/{id} HTTP ' + (statuses.length ? [...new Set(statuses)].join(',') : 'sem produtos') + '; ' + offers.length + ' buy_box_winner(s).' };
+  return {
+    checked: products.length + childProductsChecked,
+    offers,
+    diagnostic: 'fallback catálogo oficial: ' + products.length + ' produto(s), ' + childProductsChecked +
+      ' filho(s) consultado(s); /products/{id} HTTP ' +
+      (statuses.length ? [...new Set(statuses)].join(',') : 'sem produtos') +
+      '; ' + offers.length + ' buy_box_winner(s).',
+  };
 }
 async function getAccessToken(
   admin: ReturnType<typeof createClient>,
@@ -286,7 +312,10 @@ Deno.serve(async (req: Request) => {
         }
         const shippingVerified = freeShipping;
         const shippingOnly = config.free_shipping_only === true;
-        if ((shippingOnly && !freeShipping) || quantity > config.max_installments || totalPrice > config.max_price) {
+        const maxPrice = Number(config.max_price);
+        const hasPriceLimit = Number.isFinite(maxPrice) && maxPrice > 0;
+        const maxInstallments = Number(config.max_installments) > 0 ? Number(config.max_installments) : Number.POSITIVE_INFINITY;
+        if ((shippingOnly && !freeShipping) || quantity > maxInstallments || (hasPriceLimit && totalPrice > maxPrice)) {
           rejected++;
           continue;
         }

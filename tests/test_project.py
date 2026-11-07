@@ -75,9 +75,16 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn("searchCatalogOffers", scanner)
         self.assertIn("https://api.mercadolibre.com/products/search", scanner)
         self.assertIn("buy_box_winner", scanner)
+        self.assertIn("children_ids", scanner)
+        self.assertIn("childProductsChecked", scanner)
         self.assertIn("https://api.mercadolibre.com/products/", scanner)
         self.assertIn('source = "mercado_livre_catalog"', scanner)
         self.assertIn("response.status === 403", scanner)
+
+    def test_zero_price_limit_means_no_price_cap(self):
+        scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
+        self.assertIn("const hasPriceLimit = Number.isFinite(maxPrice) && maxPrice > 0", scanner)
+        self.assertIn("(hasPriceLimit && totalPrice > maxPrice)", scanner)
 
     def test_scheduler_is_configured_for_fifteen_minutes(self):
         scheduler = (ROOT / "supabase/schedule-scan.sql").read_text(encoding="utf-8")
