@@ -11,6 +11,7 @@ type SearchConfig = {
   term: string;
   max_price: number;
   max_installments: number;
+  free_shipping_only?: boolean;
 };
 
 type MercadoLivreItem = {
@@ -180,7 +181,7 @@ Deno.serve(async (req: Request) => {
 
   let configQuery = admin
     .from("search_configs")
-    .select("user_id, term, max_price, max_installments");
+    .select("user_id, term, max_price, max_installments, free_shipping_only");
   if (requestedUserId) configQuery = configQuery.eq("user_id", requestedUserId);
   const { data: configs, error: configError } = await configQuery;
 
@@ -283,7 +284,9 @@ Deno.serve(async (req: Request) => {
           rejected++;
           continue;
         }
-        if (!freeShipping || quantity > config.max_installments || totalPrice > config.max_price) {
+        const shippingVerified = freeShipping;
+        const shippingOnly = config.free_shipping_only === true;
+        if ((shippingOnly && !freeShipping) || quantity > config.max_installments || totalPrice > config.max_price) {
           rejected++;
           continue;
         }
@@ -299,7 +302,8 @@ Deno.serve(async (req: Request) => {
           currency: item.currency_id ?? "BRL",
           url,
           image_url: item.thumbnail ?? null,
-          free_shipping: true,
+          free_shipping: freeShipping,
+          shipping_verified: shippingVerified,
           observed_at: new Date().toISOString(),
         });
       }

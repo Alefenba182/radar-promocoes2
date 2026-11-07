@@ -55,6 +55,14 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn('configQuery.eq("user_id", requestedUserId)', scanner)
         self.assertIn('bearerToken === cronSecret', scanner)
 
+    def test_optional_filters_are_configurable_and_not_forced(self):
+        dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
+        scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
+        self.assertIn('id="free-shipping"', dashboard)
+        self.assertIn("free_shipping_only", dashboard)
+        self.assertIn("shippingOnly && !freeShipping", scanner)
+        self.assertIn("Sem limite", dashboard)
+
     def test_scanner_has_catalog_fallback_for_general_search_403(self):
         scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
         self.assertIn("searchCatalogOffers", scanner)

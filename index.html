@@ -14,7 +14,7 @@
 <section class="card"><div class="section-head"><h2>Conectar loja</h2><span class="hint">OAuth seguro</span></div><p class="hint">Conecte sua conta do Mercado Livre para permitir consultas autenticadas. A autorização acontece no site oficial e os tokens ficam somente no servidor.</p><a id="connect-ml" target="_blank" rel="noopener noreferrer" href="https://vektbwbqgffonwngvvkq.supabase.co/functions/v1/dynamic-function?action=start" style="display:block;text-align:center;text-decoration:none;background:#65d6a5;color:#06251a;font-weight:750;padding:14px;border-radius:12px;margin-top:14px">Conectar Mercado Livre</a></section>
 <section class="card"><h2>Configurar busca</h2>
 <label for="term">Produto ou palavra-chave</label><input id="term" maxlength="120" placeholder="Ex.: memória RAM DDR4 8GB">
-<div class="grid"><div><label for="price">Preço máximo total (R$)</label><input id="price" type="number" min="0" step="0.01" placeholder="400"></div><div><label for="installments">Parcelas máximas</label><select id="installments"><option value="1">1</option><option value="3">3</option><option value="6">6</option><option value="10" selected>10</option><option value="12">12</option><option value="18">18</option><option value="24">24</option></select></div></div>
+<div class="grid"><div><label for="price">Preço máximo (R$)</label><input id="price" type="number" min="0" step="0.01" placeholder="400"></div><div><label for="installments">Limite de parcelas</label><select id="installments"><option value="24" selected>Sem limite</option><option value="1">Até 1x</option><option value="3">Até 3x</option><option value="6">Até 6x</option><option value="10">Até 10x</option><option value="12">Até 12x</option><option value="18">Até 18x</option></select></div></div><label style="display:flex;align-items:center;gap:10px;margin-top:16px"><input id="free-shipping" type="checkbox" style="width:auto;transform:scale(1.2)"> Exigir frete grátis confirmado</label><p class="hint">Desmarcado: também mostra anúncios com frete pago ou ainda não confirmado. Se a API não informar o custo do frete, o total final será indicado como não confirmado.</p>
 <button id="save" type="button" disabled>Salvar configurações na nuvem</button><p id="feedback" class="hint" aria-live="polite">Aguarde a conexão com o Supabase.</p></section>
 <section class="card"><div class="section-head"><h2>Ofertas encontradas</h2></div><div class="action-row"><button id="scan" type="button" disabled>Buscar ofertas agora</button><button id="refresh" type="button" disabled>Atualizar lista</button></div><p id="offers-status" class="hint" aria-live="polite">As ofertas salvas aparecerão aqui após uma coleta válida.</p><div id="offers" class="offers"><div class="empty">Nenhuma oferta carregada.</div></div></section>
 <p class="hint">As configurações ficam vinculadas à sua sessão anônima neste navegador. Use o mesmo navegador para acessá-las novamente.</p>
@@ -73,7 +73,7 @@
      price.textContent=Number(offer.total_price).toLocaleString("pt-BR",{style:"currency",currency:offer.currency||"BRL"});
      const meta=document.createElement("div");
      meta.className="offer-meta";
-     meta.textContent=`${offer.installments}x de ${Number(offer.installment_amount).toLocaleString("pt-BR",{style:"currency",currency:offer.currency||"BRL"})} · ${offer.free_shipping?"frete grátis confirmado":"frete não confirmado"}`;
+     meta.textContent=`${offer.installments}x de ${Number(offer.installment_amount).toLocaleString("pt-BR",{style:"currency",currency:offer.currency||"BRL"})} · ${offer.free_shipping?"frete grátis confirmado":(offer.shipping_verified?"frete pago/valor conhecido":"frete a consultar; total não confirmado")}`;
      const link=document.createElement("a");
      link.href=offer.url;
      link.target="_blank";
@@ -132,7 +132,7 @@
      userId=session.user.id;
      const {data,error:readError}=await client.from("search_configs").select("term,max_price,max_installments").eq("user_id",userId).maybeSingle();
      if(readError) throw readError;
-     if(data){$("term").value=data.term;$("price").value=data.max_price;$("installments").value=String(data.max_installments);}
+     if(data){$("term").value=data.term;$("price").value=data.max_price;$("installments").value=String(data.max_installments);$("free-shipping").checked=Boolean(data.free_shipping_only);}
      $("connection").textContent="Conectado ao Supabase";
      $("save").disabled=false;
      $("refresh").disabled=false;
@@ -151,11 +151,12 @@
    const term=$("term").value.trim();
    const price=Number($("price").value);
    const installments=Number($("installments").value);
+   const freeShippingOnly=$("free-shipping").checked;
    if(!term){message("Informe o produto ou palavra-chave.");return;}
    if(!Number.isFinite(price)||price<0){message("Informe um preço máximo válido.");return;}
    $("save").disabled=true;message("Salvando configurações...");
    try{
-     const {error}=await client.from("search_configs").upsert({user_id:userId,term,max_price:price,max_installments:installments,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+     const {error}=await client.from("search_configs").upsert({user_id:userId,term,max_price:price,max_installments:installments,free_shipping_only:freeShippingOnly,updated_at:new Date().toISOString()},{onConflict:"user_id"});
      if(error) throw error;
      message("Configurações salvas na nuvem com sucesso.");
      await loadOffers();
