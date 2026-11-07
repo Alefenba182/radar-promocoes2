@@ -45,75 +45,41 @@ type TokenPayload = {
 };
 
 
-type CatalogProduct = {
-  id: string;
-  name?: string;
-  permalink?: string;
-  pictures?: Array<{ url?: string }>;
-};
-
-type CatalogOffer = {
-  item_id?: string;
-  id?: string;
-  title?: string;
-  price?: number;
-  currency_id?: string;
-  permalink?: string;
-  thumbnail?: string;
-  picture?: string;
-  shipping?: { free_shipping?: boolean };
-  installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null;
-};
+type CatalogProduct = { id: string; name?: string; permalink?: string; pictures?: Array<{ url?: string }> };
+type CatalogWinner = { item_id?: string; price?: number; currency_id?: string; seller_id?: number; shipping?: { free_shipping?: boolean } };
 
 async function fetchProviderJson(url: URL | string, accessToken: string) {
   const response = await fetch(url, {
-    headers: { "Accept": "application/json", "Authorization": "Bearer " + accessToken, "User-Agent": "RadarDePromocoes/1.0" },
+    headers: { Accept: 'application/json', Authorization: 'Bearer ' + accessToken, 'User-Agent': 'RadarDePromocoes/1.0' },
     signal: AbortSignal.timeout(20_000),
   });
   const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
   return { response, payload };
 }
 
+// Official catalog flow: search products, then read each product's buy_box_winner.
 async function searchCatalogOffers(term: string, accessToken: string) {
-  const searchUrl = new URL("https://api.mercadolibre.com/products/search");
-  searchUrl.searchParams.set("status", "active");
-  searchUrl.searchParams.set("site_id", "MLB");
-  searchUrl.searchParams.set("q", term);
-  searchUrl.searchParams.set("limit", "10");
+  const searchUrl = new URL('https://api.mercadolibre.com/products/search');
+  searchUrl.searchParams.set('status', 'active');
+  searchUrl.searchParams.set('site_id', 'MLB');
+  searchUrl.searchParams.set('q', term);
+  searchUrl.searchParams.set('limit', '10');
   const search = await fetchProviderJson(searchUrl, accessToken);
-  if (!search.response.ok) {
-    return { checked: 0, offers: [] as CatalogOffer[], diagnostic: "catálogo /products/search HTTP " + search.response.status };
-  }
+  if (!search.response.ok) return { checked: 0, offers: [] as Array<Record<string, unknown>>, diagnostic: 'catálogo /products/search HTTP ' + search.response.status };
   const products = (search.payload.results ?? []) as CatalogProduct[];
-  const offers: CatalogOffer[] = [];
-  let checked = 0;
+  const offers: Array<Record<string, unknown>> = [];
   const statuses: number[] = [];
   for (const product of products.slice(0, 10)) {
     if (!product?.id) continue;
-    const url = new URL("https://api.mercadolibre.com/products/" + encodeURIComponent(product.id) + "/items");
-    url.searchParams.set("limit", "50");
-    const listing = await fetchProviderJson(url, accessToken);
-    statuses.push(listing.response.status);
-    if (!listing.response.ok) continue;
-    const rows = (listing.payload.results ?? []) as CatalogOffer[];
-    checked += rows.length;
-    for (const row of rows) {
-      offers.push({
-        ...row,
-        title: row.title || product.name,
-        permalink: row.permalink || product.permalink,
-        thumbnail: row.thumbnail || row.picture || product.pictures?.[0]?.url,
-      });
-    }
+    const detail = await fetchProviderJson('https://api.mercadolibre.com/products/' + encodeURIComponent(product.id), accessToken);
+    statuses.push(detail.response.status);
+    if (!detail.response.ok) continue;
+    const winner = detail.payload.buy_box_winner as CatalogWinner | null;
+    if (!winner?.item_id || !product.permalink || !Number.isFinite(Number(winner.price))) continue;
+    offers.push({ ...winner, title: product.name || 'Produto do catálogo Mercado Livre', permalink: product.permalink, thumbnail: product.pictures?.[0]?.url, product_id: product.id });
   }
-  return {
-    checked,
-    offers,
-    diagnostic: "fallback catálogo: " + products.length + " produto(s); /products/{id}/items HTTP " +
-      (statuses.length ? [...new Set(statuses)].join(",") : "sem produtos") + "; " + checked + " anúncio(s).",
-  };
+  return { checked: products.length, offers, diagnostic: 'fallback catálogo oficial: ' + products.length + ' produto(s); /products/{id} HTTP ' + (statuses.length ? [...new Set(statuses)].join(',') : 'sem produtos') + '; ' + offers.length + ' buy_box_winner(s).' };
 }
-
 async function getAccessToken(
   admin: ReturnType<typeof createClient>,
   userId: string,
@@ -306,8 +272,9 @@ Deno.serve(async (req: Request) => {
       for (const item of items) {
         const price = Number(item.price);
         const freeShipping = item.shipping?.free_shipping === true;
-        const quantity = item.installments?.quantity ?? 1;
-        const installmentAmount = item.installments?.amount ?? price;
+        const hasInstallmentData = 'installments' in item && item.installments != null;
+        const quantity = hasInstallmentData ? (item.installments?.quantity ?? 1) : 1;
+        const installmentAmount = hasInstallmentData ? (item.installments?.amount ?? price) : price;
         const totalPrice = Math.max(price, Number(installmentAmount * quantity));
         const externalId = ("item_id" in item ? item.item_id : item.id);
         const url = item.permalink;
