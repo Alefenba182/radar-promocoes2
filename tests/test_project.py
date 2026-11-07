@@ -89,6 +89,13 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn("const hasPriceLimit = Number.isFinite(maxPrice) && maxPrice > 0", scanner)
         self.assertIn("(hasPriceLimit && totalPrice > maxPrice)", scanner)
 
+    def test_scanner_replaces_stale_marketplace_offers_after_filtering(self):
+        scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
+        self.assertIn('.delete()', scanner)
+        self.assertIn('.eq("user_id", config.user_id)', scanner)
+        self.assertIn('.in("source", ["mercado_livre", "mercado_livre_catalog"])', scanner)
+        self.assertLess(scanner.index('.delete()'), scanner.index('admin.from("offers").upsert(offers'))
+
     def test_scheduler_is_configured_for_fifteen_minutes(self):
         scheduler = (ROOT / "supabase/schedule-scan.sql").read_text(encoding="utf-8")
         self.assertIn("'*/15 * * * *'", scheduler)

@@ -369,6 +369,17 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      // Replace this user's previous Mercado Livre results with the current
+      // filtered set. Otherwise offers rejected by a newly tightened price cap
+      // would remain visible from an older scan.
+      const { error: deleteError } = await admin.from("offers")
+        .delete()
+        .eq("user_id", config.user_id)
+        .in("source", ["mercado_livre", "mercado_livre_catalog"]);
+      if (deleteError) {
+        errors.push(`Não foi possível limpar ofertas antigas de ${config.term}: ${deleteError.message}`);
+        continue;
+      }
       if (offers.length) {
         const { error: saveError } = await admin.from("offers").upsert(offers, {
           onConflict: "user_id,source,external_id",
