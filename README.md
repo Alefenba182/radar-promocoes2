@@ -1,6 +1,6 @@
 # Radar de Promoções
 
-Painel móvel para configurar buscas e acompanhar ofertas com filtros de preço total e parcelamento.
+Painel móvel para configuração de buscas sem precisar de computador e acompanhamento de ofertas com filtros de preço total e parcelamento.
 
 ## O que já está no projeto
 
