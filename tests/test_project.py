@@ -59,7 +59,8 @@ class DashboardFeatureTests(unittest.TestCase):
         scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
         self.assertIn("searchCatalogOffers", scanner)
         self.assertIn("https://api.mercadolibre.com/products/search", scanner)
-        self.assertIn("/items", scanner)
+        self.assertIn("buy_box_winner", scanner)
+        self.assertIn("https://api.mercadolibre.com/products/", scanner)
         self.assertIn('source = "mercado_livre_catalog"', scanner)
         self.assertIn("response.status === 403", scanner)
 

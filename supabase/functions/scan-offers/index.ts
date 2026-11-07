@@ -46,6 +46,7 @@ type TokenPayload = {
 
 
 type CatalogProduct = { id: string; name?: string; permalink?: string; pictures?: Array<{ url?: string }> };
+type CatalogOffer = { item_id?: string; id?: string; title?: string; price?: number; currency_id?: string; permalink?: string; thumbnail?: string; shipping?: { free_shipping?: boolean }; installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null };
 type CatalogWinner = { item_id?: string; price?: number; currency_id?: string; seller_id?: number; shipping?: { free_shipping?: boolean } };
 
 async function fetchProviderJson(url: URL | string, accessToken: string) {
@@ -65,9 +66,9 @@ async function searchCatalogOffers(term: string, accessToken: string) {
   searchUrl.searchParams.set('q', term);
   searchUrl.searchParams.set('limit', '10');
   const search = await fetchProviderJson(searchUrl, accessToken);
-  if (!search.response.ok) return { checked: 0, offers: [] as Array<Record<string, unknown>>, diagnostic: 'catálogo /products/search HTTP ' + search.response.status };
+  if (!search.response.ok) return { checked: 0, offers: [] as CatalogOffer[], diagnostic: 'catálogo /products/search HTTP ' + search.response.status };
   const products = (search.payload.results ?? []) as CatalogProduct[];
-  const offers: Array<Record<string, unknown>> = [];
+  const offers: CatalogOffer[] = [];
   const statuses: number[] = [];
   for (const product of products.slice(0, 10)) {
     if (!product?.id) continue;
