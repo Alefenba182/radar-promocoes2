@@ -44,6 +44,76 @@ type TokenPayload = {
   message?: string;
 };
 
+
+type CatalogProduct = {
+  id: string;
+  name?: string;
+  permalink?: string;
+  pictures?: Array<{ url?: string }>;
+};
+
+type CatalogOffer = {
+  item_id?: string;
+  id?: string;
+  title?: string;
+  price?: number;
+  currency_id?: string;
+  permalink?: string;
+  thumbnail?: string;
+  picture?: string;
+  shipping?: { free_shipping?: boolean };
+  installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null;
+};
+
+async function fetchProviderJson(url: URL | string, accessToken: string) {
+  const response = await fetch(url, {
+    headers: { "Accept": "application/json", "Authorization": "Bearer " + accessToken, "User-Agent": "RadarDePromocoes/1.0" },
+    signal: AbortSignal.timeout(20_000),
+  });
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  return { response, payload };
+}
+
+async function searchCatalogOffers(term: string, accessToken: string) {
+  const searchUrl = new URL("https://api.mercadolibre.com/products/search");
+  searchUrl.searchParams.set("status", "active");
+  searchUrl.searchParams.set("site_id", "MLB");
+  searchUrl.searchParams.set("q", term);
+  searchUrl.searchParams.set("limit", "10");
+  const search = await fetchProviderJson(searchUrl, accessToken);
+  if (!search.response.ok) {
+    return { checked: 0, offers: [] as CatalogOffer[], diagnostic: "catálogo /products/search HTTP " + search.response.status };
+  }
+  const products = (search.payload.results ?? []) as CatalogProduct[];
+  const offers: CatalogOffer[] = [];
+  let checked = 0;
+  const statuses: number[] = [];
+  for (const product of products.slice(0, 10)) {
+    if (!product?.id) continue;
+    const url = new URL("https://api.mercadolibre.com/products/" + encodeURIComponent(product.id) + "/items");
+    url.searchParams.set("limit", "50");
+    const listing = await fetchProviderJson(url, accessToken);
+    statuses.push(listing.response.status);
+    if (!listing.response.ok) continue;
+    const rows = (listing.payload.results ?? []) as CatalogOffer[];
+    checked += rows.length;
+    for (const row of rows) {
+      offers.push({
+        ...row,
+        title: row.title || product.name,
+        permalink: row.permalink || product.permalink,
+        thumbnail: row.thumbnail || row.picture || product.pictures?.[0]?.url,
+      });
+    }
+  }
+  return {
+    checked,
+    offers,
+    diagnostic: "fallback catálogo: " + products.length + " produto(s); /products/{id}/items HTTP " +
+      (statuses.length ? [...new Set(statuses)].join(",") : "sem produtos") + "; " + checked + " anúncio(s).",
+  };
+}
+
 async function getAccessToken(
   admin: ReturnType<typeof createClient>,
   userId: string,
@@ -208,46 +278,59 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      if (!response.ok) {
-        const diagnostic = await response.json().catch(() => ({})) as {
-          error?: string; message?: string; status?: number;
-        };
-        errors.push(`Mercado Livre busca (${config.term}): HTTP ${response.status}` +
-          (diagnostic.error ? ` (${String(diagnostic.error).slice(0, 80)})` : "") +
-          (diagnostic.message ? ` — ${String(diagnostic.message).slice(0, 160)}` : ""));
+      let items: CatalogOffer[];
+      let source = "mercado_livre";
+      if (!response.ok && response.status === 403) {
+        const fallback = await searchCatalogOffers(config.term, accessToken);
+        diagnostics.push("Busca geral HTTP 403; " + fallback.diagnostic);
+        items = fallback.offers;
+        checked += fallback.checked;
+        source = "mercado_livre_catalog";
+        if (!items.length) {
+          errors.push("Mercado Livre (" + config.term + "): busca geral HTTP 403 e fallback de catálogo sem anúncios utilizáveis.");
+          continue;
+        }
+      } else if (!response.ok) {
+        const diagnostic = await response.json().catch(() => ({})) as { error?: string; message?: string; status?: number };
+        errors.push("Mercado Livre busca (" + config.term + "): HTTP " + response.status +
+          (diagnostic.error ? " (" + String(diagnostic.error).slice(0, 80) + ")" : "") +
+          (diagnostic.message ? " — " + String(diagnostic.message).slice(0, 160) : ""));
         continue;
+      } else {
+        const payload = await response.json();
+        items = (payload.results ?? []) as MercadoLivreItem[];
+        checked += items.length;
       }
-
-      const payload = await response.json();
-      const items = (payload.results ?? []) as MercadoLivreItem[];
-      checked += items.length;
       const offers = [];
 
       for (const item of items) {
+        const price = Number(item.price);
         const freeShipping = item.shipping?.free_shipping === true;
         const quantity = item.installments?.quantity ?? 1;
-        const installmentAmount = item.installments?.amount ?? item.price;
-        const installmentTotal = installmentAmount * quantity;
-        const totalPrice = Math.max(Number(item.price), Number(installmentTotal));
-
-        // Keep only offers with confirmed free shipping and known total within configured limits.
+        const installmentAmount = item.installments?.amount ?? price;
+        const totalPrice = Math.max(price, Number(installmentAmount * quantity));
+        const externalId = ("item_id" in item ? item.item_id : item.id);
+        const url = item.permalink;
+        if (!externalId || !url || !Number.isFinite(price) || price <= 0) {
+          rejected++;
+          continue;
+        }
         if (!freeShipping || quantity > config.max_installments || totalPrice > config.max_price) {
           rejected++;
           continue;
         }
-
         offers.push({
           user_id: config.user_id,
-          source: "mercado_livre",
-          external_id: item.id,
-          title: item.title,
-          price: Number(item.price),
+          source,
+          external_id: externalId,
+          title: item.title || "Produto Mercado Livre",
+          price,
           total_price: Number(totalPrice),
           installments: quantity,
           installment_amount: Number(installmentAmount),
           currency: item.currency_id ?? "BRL",
-          url: item.permalink,
-          image_url: item.thumbnail,
+          url,
+          image_url: item.thumbnail ?? null,
           free_shipping: true,
           observed_at: new Date().toISOString(),
         });
