@@ -77,7 +77,7 @@ async function searchCatalogOffers(term: string, accessToken: string) {
     if (!detail.response.ok) continue;
     const winner = detail.payload.buy_box_winner as CatalogWinner | null;
     if (!winner?.item_id || !product.permalink || !Number.isFinite(Number(winner.price))) continue;
-    offers.push({ ...winner, title: product.name || 'Produto do catálogo Mercado Livre', permalink: product.permalink, thumbnail: product.pictures?.[0]?.url, product_id: product.id });
+    offers.push({ ...winner, title: product.name || 'Produto do catálogo Mercado Livre', permalink: product.permalink, thumbnail: product.pictures?.[0]?.url });
   }
   return { checked: products.length, offers, diagnostic: 'fallback catálogo oficial: ' + products.length + ' produto(s); /products/{id} HTTP ' + (statuses.length ? [...new Set(statuses)].join(',') : 'sem produtos') + '; ' + offers.length + ' buy_box_winner(s).' };
 }
