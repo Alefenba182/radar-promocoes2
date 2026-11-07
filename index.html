@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220">
 <title>Radar de Promoções</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--line:#26364c;--muted:#9aabc0;--accent:#65d6a5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4fb;font:16px system-ui}main{width:min(100% - 28px,760px);margin:28px auto}.top{display:flex;align-items:center;gap:12px;margin-bottom:22px}.logo{width:44px;height:44px;border-radius:14px;background:#173b36;display:grid;place-items:center;font-size:24px}h1{font-size:22px;margin:0}h2{font-size:18px;margin:0}.sub,.hint{color:var(--muted)}.sub{margin:5px 0 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}.status{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:650}.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}label{display:block;font-size:13px;color:var(--muted);margin:14px 0 7px}input,select{width:100%;background:#0b1422;color:#fff;border:1px solid var(--line);border-radius:11px;padding:13px;font:inherit}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:13px;line-height:1.5}button{width:100%;border:0;border-radius:12px;background:var(--accent);color:#06251a;font-weight:750;padding:14px;font:inherit;margin-top:18px}button:disabled{opacity:.55}footer{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}@media(max-width:420px){.grid{grid-template-columns:1fr}}
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--line:#26364c;--muted:#9aabc0;--accent:#65d6a5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4fb;font:16px system-ui}main{width:min(100% - 28px,760px);margin:28px auto}.top{display:flex;align-items:center;gap:12px;margin-bottom:22px}.logo{width:44px;height:44px;border-radius:14px;background:#173b36;display:grid;place-items:center;font-size:24px}h1{font-size:22px;margin:0}h2{font-size:18px;margin:0}.sub,.hint{color:var(--muted)}.sub{margin:5px 0 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}.status{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:650}.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}label{display:block;font-size:13px;color:var(--muted);margin:14px 0 7px}input,select{width:100%;background:#0b1422;color:#fff;border:1px solid var(--line);border-radius:11px;padding:13px;font:inherit}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:13px;line-height:1.5}button{width:100%;border:0;border-radius:12px;background:var(--accent);color:#06251a;font-weight:750;padding:14px;font:inherit;margin-top:18px}button:disabled{opacity:.55}footer{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-head button{width:auto;margin:0;padding:9px 12px;font-size:13px}.offers{display:grid;gap:10px;margin-top:14px}.offer{display:grid;grid-template-columns:76px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#0d1726}.offer img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:9px}.offer h3{font-size:14px;line-height:1.35;margin:0 0 7px}.offer-price{font-size:18px;font-weight:800;color:var(--accent)}.offer-meta{font-size:12px;color:var(--muted);margin-top:4px}.offer a{color:#8bc9ff;font-size:13px}.empty{padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:13px}@media(max-width:420px){.grid{grid-template-columns:1fr}.offer{grid-template-columns:64px 1fr}.offer img{width:64px;height:64px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -15,7 +15,7 @@
 <label for="term">Produto ou palavra-chave</label><input id="term" maxlength="120" placeholder="Ex.: memória RAM DDR4 8GB">
 <div class="grid"><div><label for="price">Preço máximo total (R$)</label><input id="price" type="number" min="0" step="0.01" placeholder="400"></div><div><label for="installments">Parcelas máximas</label><select id="installments"><option value="1">1</option><option value="3">3</option><option value="6">6</option><option value="10" selected>10</option><option value="12">12</option><option value="18">18</option><option value="24">24</option></select></div></div>
 <button id="save" type="button" disabled>Salvar configurações na nuvem</button><p id="feedback" class="hint" aria-live="polite">Aguarde a conexão com o Supabase.</p></section>
-<section class="card"><h2>Ofertas monitoradas</h2><p class="hint">O monitor automático ainda está em desenvolvimento. Nenhuma oferta será exibida como verificada até a integração com as fontes.</p></section>
+<section class="card"><div class="section-head"><h2>Ofertas encontradas</h2><button id="refresh" type="button" disabled>Atualizar</button></div><p id="offers-status" class="hint" aria-live="polite">As ofertas salvas aparecerão aqui após uma coleta válida.</p><div id="offers" class="offers"><div class="empty">Nenhuma oferta carregada.</div></div></section>
 <p class="hint">As configurações ficam vinculadas à sua sessão anônima neste navegador. Use o mesmo navegador para acessá-las novamente.</p>
 <footer>Radar de Promoções · integração inicial</footer></main>
 <script>
@@ -38,6 +38,70 @@
  const $=id=>document.getElementById(id);
  let userId=null;
  function message(text){$("feedback").textContent=text}
+ function renderOffers(rows){
+   const list=$("offers");
+   list.replaceChildren();
+   if(!rows.length){
+     const empty=document.createElement("div");
+     empty.className="empty";
+     empty.textContent="Nenhuma oferta encontrada para esta busca ainda.";
+     list.append(empty);
+     return;
+   }
+   for(const offer of rows){
+     const card=document.createElement("article");
+     card.className="offer";
+     if(offer.image_url){
+       const image=document.createElement("img");
+       image.src=offer.image_url;
+       image.alt="";
+       image.loading="lazy";
+       image.referrerPolicy="no-referrer";
+       card.append(image);
+     }else{
+       const placeholder=document.createElement("div");
+       placeholder.className="empty";
+       placeholder.textContent="Sem imagem";
+       card.append(placeholder);
+     }
+     const details=document.createElement("div");
+     const title=document.createElement("h3");
+     title.textContent=offer.title;
+     const price=document.createElement("div");
+     price.className="offer-price";
+     price.textContent=Number(offer.total_price).toLocaleString("pt-BR",{style:"currency",currency:offer.currency||"BRL"});
+     const meta=document.createElement("div");
+     meta.className="offer-meta";
+     meta.textContent=`${offer.installments}x de ${Number(offer.installment_amount).toLocaleString("pt-BR",{style:"currency",currency:offer.currency||"BRL"})} · ${offer.free_shipping?"frete grátis confirmado":"frete não confirmado"}`;
+     const link=document.createElement("a");
+     link.href=offer.url;
+     link.target="_blank";
+     link.rel="noopener noreferrer";
+     link.textContent="Ver oferta";
+     details.append(title,price,meta,link);
+     card.append(details);
+     list.append(card);
+   }
+ }
+ async function loadOffers(){
+   if(!userId) return;
+   $("refresh").disabled=true;
+   $("offers-status").textContent="Buscando ofertas salvas...";
+   try{
+     const {data,error}=await client.from("offers")
+       .select("title,total_price,installments,installment_amount,currency,url,image_url,free_shipping,observed_at")
+       .eq("user_id",userId)
+       .order("observed_at",{ascending:false})
+       .limit(50);
+     if(error) throw error;
+     renderOffers(data||[]);
+     $("offers-status").textContent=data?.length
+       ? `${data.length} oferta(s) salva(s). Última coleta: ${new Date(data[0].observed_at).toLocaleString("pt-BR")}.`
+       : "Ainda não há ofertas salvas. A coleta automática será ativada após a configuração do agendador.";
+   }catch(error){
+     $("offers-status").textContent="Não foi possível carregar ofertas: "+(error.message||"tente novamente.");
+   }finally{$("refresh").disabled=false;}
+ }
  async function start(){
    try{
      let {data:{session},error}=await client.auth.getSession();
@@ -54,12 +118,15 @@
      if(data){$("term").value=data.term;$("price").value=data.max_price;$("installments").value=String(data.max_installments);}
      $("connection").textContent="Conectado ao Supabase";
      $("save").disabled=false;
+     $("refresh").disabled=false;
      message(data?"Configurações carregadas da nuvem.":"Conectado! Defina sua busca e salve na nuvem.");
+     await loadOffers();
    }catch(error){
      $("connection").textContent="Falha na conexão";
      message("Não foi possível conectar: "+(error.message||"verifique a configuração do Supabase."));
    }
  }
+ $("refresh").addEventListener("click",loadOffers);
  $("save").addEventListener("click",async()=>{
    if(!userId){message("A conexão ainda não está pronta. Atualize a página e tente novamente.");return;}
    const term=$("term").value.trim();
@@ -72,6 +139,7 @@
      const {error}=await client.from("search_configs").upsert({user_id:userId,term,max_price:price,max_installments:installments,updated_at:new Date().toISOString()},{onConflict:"user_id"});
      if(error) throw error;
      message("Configurações salvas na nuvem com sucesso.");
+     await loadOffers();
    }catch(error){message("Erro ao salvar: "+(error.message||"tente novamente."));}
    finally{$("save").disabled=false;}
  });
