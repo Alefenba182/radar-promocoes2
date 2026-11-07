@@ -36,7 +36,7 @@ class DashboardFeatureTests(unittest.TestCase):
         dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="offers"', dashboard)
         self.assertIn('id="refresh"', dashboard)
-        self.assertIn("async function loadOffers()", dashboard)
+        self.assertIn("async function loadOffers(preserveStatus=false)", dashboard)
         self.assertIn("renderOffers(data||[])", dashboard)
 
     def test_offer_rendering_uses_text_content_for_titles(self):
