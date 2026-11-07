@@ -12,6 +12,7 @@ Painel móvel para configuração de buscas sem precisar de computador e acompan
 - Busca manual iniciada pelo próprio painel, com JWT validado no servidor e acesso restrito às configurações do usuário.
 - Edge Function de coleta com renovação do token OAuth, filtros de frete grátis e limite de preço.
 - Diagnóstico separado para distinguir falhas de autenticação de bloqueios no endpoint de busca.
+- Fallback oficial pelo catálogo de produtos (`/products/search` + `/products/{id}`), usando `buy_box_winner` quando disponível; não equivale a uma listagem completa de todos os anúncios.
 - Script para agendar a coleta a cada 15 minutos usando pg_cron, pg_net e Supabase Vault.
 - Testes automatizados no GitHub Actions.
 
@@ -19,7 +20,7 @@ Painel móvel para configuração de buscas sem precisar de computador e acompan
 
 1. Publicar a versão mais recente de `supabase/functions/scan-offers/index.ts` no Supabase. Isso habilita a busca manual pelo painel e a futura chamada agendada.
 2. Executar `supabase/schedule-scan.sql` no SQL Editor, substituindo o marcador pelo mesmo valor de `CRON_SECRET` já cadastrado nas Edge Functions. O segredo não deve ser enviado ao GitHub nem ao chat.
-3. Confirmar que o Mercado Livre permite a busca autenticada para esta aplicação. A última execução retornou HTTP 403; a nova versão da função registra separadamente o resultado de `/users/me` e os detalhes seguros do erro de busca.
+3. Publicar e validar a versão atual do scanner no Supabase. Se `/sites/MLB/search` retornar HTTP 403, a função tenta o catálogo oficial. O catálogo pode não ter `buy_box_winner` para todos os produtos e não fornece necessariamente parcelamento; por isso o radar só salva vencedores com preço, link de catálogo e frete grátis confirmado. Isso ainda precisa ser testado com a conexão real.
 4. Integrar e validar as APIs oficiais de Amazon e Shopee. Elas ainda não são fontes ativas e não devem ser apresentadas como se já estivessem coletando.
 
 ## Configuração e segurança
