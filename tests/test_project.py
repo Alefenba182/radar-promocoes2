@@ -78,6 +78,9 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn("children_ids", scanner)
         self.assertIn("childProductsChecked", scanner)
         self.assertIn("https://api.mercadolibre.com/products/", scanner)
+        self.assertIn(" + '/items'", scanner)
+        self.assertIn("associatedListingsFound", scanner)
+        self.assertIn("https://api.mercadolibre.com/products/", scanner)
         self.assertIn('source = "mercado_livre_catalog"', scanner)
         self.assertIn("response.status === 403", scanner)
 

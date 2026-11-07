@@ -49,6 +49,7 @@ type TokenPayload = {
 type CatalogProduct = { id: string; name?: string; permalink?: string; pictures?: Array<{ url?: string }>; children_ids?: string[] };
 type CatalogOffer = { item_id?: string; id?: string; title?: string; price?: number; currency_id?: string; permalink?: string; thumbnail?: string; shipping?: { free_shipping?: boolean }; installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null };
 type CatalogWinner = { item_id?: string; price?: number; currency_id?: string; seller_id?: number; shipping?: { free_shipping?: boolean } };
+type CatalogListing = { item_id?: string; id?: string; price?: number; currency_id?: string; seller_id?: number; shipping?: { free_shipping?: boolean }; installments?: { quantity?: number; amount?: number; rate?: number; currency_id?: string } | null };
 
 async function fetchProviderJson(url: URL | string, accessToken: string) {
   const response = await fetch(url, {
@@ -73,6 +74,8 @@ async function searchCatalogOffers(term: string, accessToken: string) {
   const offers: CatalogOffer[] = [];
   const statuses: number[] = [];
   let childProductsChecked = 0;
+  let associatedListingsChecked = 0;
+  let associatedListingsFound = 0;
   for (const product of products.slice(0, 10)) {
     if (!product?.id) continue;
     const detail = await fetchProviderJson('https://api.mercadolibre.com/products/' + encodeURIComponent(product.id), accessToken);
@@ -87,25 +90,54 @@ async function searchCatalogOffers(term: string, accessToken: string) {
       if (child.response.ok) candidates.push(child.payload as CatalogProduct & { buy_box_winner?: CatalogWinner | null });
     }
     for (const candidate of candidates) {
+      // This endpoint lists all marketplace publications associated with the catalog product,
+      // rather than only the single buy_box_winner.
+      const listingUrl = 'https://api.mercadolibre.com/products/' + encodeURIComponent(candidate.id) + '/items';
+      const listingResponse = await fetchProviderJson(listingUrl, accessToken);
+      statuses.push(listingResponse.response.status);
+      if (listingResponse.response.ok) {
+        const listings = (listingResponse.payload.results ?? []) as CatalogListing[];
+        associatedListingsChecked += listings.length;
+        for (const listing of listings) {
+          const itemId = listing.item_id || listing.id;
+          const price = Number(listing.price);
+          if (!itemId || !Number.isFinite(price) || price <= 0) continue;
+          associatedListingsFound++;
+          const numericId = itemId.replace(/^MLB/, '');
+          offers.push({
+            item_id: itemId,
+            title: candidate.name || product.name || 'Produto do catálogo Mercado Livre',
+            price,
+            currency_id: listing.currency_id || 'BRL',
+            permalink: 'https://produto.mercadolivre.com.br/MLB-' + numericId,
+            thumbnail: candidate.pictures?.[0]?.url || product.pictures?.[0]?.url,
+            shipping: listing.shipping,
+            installments: listing.installments,
+          });
+        }
+      }
+      // Keep the buy-box record as a last-resort listing if the associated-items
+      // endpoint did not return it.
       const winner = candidate.buy_box_winner;
-      if (!winner?.item_id || !Number.isFinite(Number(winner.price))) continue;
-      const productUrl = candidate.permalink || product.permalink;
-      if (!productUrl) continue;
-      offers.push({
-        ...winner,
-        title: candidate.name || product.name || 'Produto do catálogo Mercado Livre',
-        permalink: productUrl,
-        thumbnail: candidate.pictures?.[0]?.url || product.pictures?.[0]?.url,
-      });
+      if (winner?.item_id && Number.isFinite(Number(winner.price)) &&
+          !offers.some((offer) => offer.item_id === winner.item_id)) {
+        const numericId = winner.item_id.replace(/^MLB/, '');
+        offers.push({
+          ...winner,
+          title: candidate.name || product.name || 'Produto do catálogo Mercado Livre',
+          permalink: 'https://produto.mercadolivre.com.br/MLB-' + numericId,
+          thumbnail: candidate.pictures?.[0]?.url || product.pictures?.[0]?.url,
+        });
+      }
     }
   }
   return {
-    checked: products.length + childProductsChecked,
+    checked: products.length + childProductsChecked + associatedListingsChecked,
     offers,
-    diagnostic: 'fallback catálogo oficial: ' + products.length + ' produto(s), ' + childProductsChecked +
-      ' filho(s) consultado(s); /products/{id} HTTP ' +
-      (statuses.length ? [...new Set(statuses)].join(',') : 'sem produtos') +
-      '; ' + offers.length + ' buy_box_winner(s).',
+    diagnostic: 'fallback catálogo: ' + products.length + ' produto(s), ' + childProductsChecked +
+      ' filho(s), /products/{id}/items HTTP ' + (statuses.length ? [...new Set(statuses)].join(',') : 'sem consultas') +
+      '; ' + associatedListingsChecked + ' publicação(ões) consultada(s), ' + associatedListingsFound +
+      ' anúncio(s) retornado(s), ' + offers.length + ' oferta(s) aproveitável(is).',
   };
 }
 async function getAccessToken(
