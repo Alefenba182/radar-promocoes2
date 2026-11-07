@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220">
 <title>Radar de Promoções</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--line:#26364c;--muted:#9aabc0;--accent:#65d6a5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4fb;font:16px system-ui}main{width:min(100% - 28px,760px);margin:28px auto}.top{display:flex;align-items:center;gap:12px;margin-bottom:22px}.logo{width:44px;height:44px;border-radius:14px;background:#173b36;display:grid;place-items:center;font-size:24px}h1{font-size:22px;margin:0}h2{font-size:18px;margin:0}.sub,.hint{color:var(--muted)}.sub{margin:5px 0 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}.status{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:650}.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}label{display:block;font-size:13px;color:var(--muted);margin:14px 0 7px}input,select{width:100%;background:#0b1422;color:#fff;border:1px solid var(--line);border-radius:11px;padding:13px;font:inherit}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:13px;line-height:1.5}button{width:100%;border:0;border-radius:12px;background:var(--accent);color:#06251a;font-weight:750;padding:14px;font:inherit;margin-top:18px}button:disabled{opacity:.55}footer{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-head button{width:auto;margin:0;padding:9px 12px;font-size:13px}.offers{display:grid;gap:10px;margin-top:14px}.offer{display:grid;grid-template-columns:76px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#0d1726}.offer img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:9px}.offer h3{font-size:14px;line-height:1.35;margin:0 0 7px}.offer-price{font-size:18px;font-weight:800;color:var(--accent)}.offer-meta{font-size:12px;color:var(--muted);margin-top:4px}.offer a{color:#8bc9ff;font-size:13px}.empty{padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:13px}@media(max-width:420px){.grid{grid-template-columns:1fr}.offer{grid-template-columns:64px 1fr}.offer img{width:64px;height:64px}}
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--line:#26364c;--muted:#9aabc0;--accent:#65d6a5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4fb;font:16px system-ui}main{width:min(100% - 28px,760px);margin:28px auto}.top{display:flex;align-items:center;gap:12px;margin-bottom:22px}.logo{width:44px;height:44px;border-radius:14px;background:#173b36;display:grid;place-items:center;font-size:24px}h1{font-size:22px;margin:0}h2{font-size:18px;margin:0}.sub,.hint{color:var(--muted)}.sub{margin:5px 0 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}.status{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:650}.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}label{display:block;font-size:13px;color:var(--muted);margin:14px 0 7px}input,select{width:100%;background:#0b1422;color:#fff;border:1px solid var(--line);border-radius:11px;padding:13px;font:inherit}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:13px;line-height:1.5}button{width:100%;border:0;border-radius:12px;background:var(--accent);color:#06251a;font-weight:750;padding:14px;font:inherit;margin-top:18px}button:disabled{opacity:.55}footer{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-head button{width:auto;margin:0;padding:9px 12px;font-size:13px}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.action-row button{margin-top:14px}@media(max-width:420px){.action-row{grid-template-columns:1fr}}.offers{display:grid;gap:10px;margin-top:14px}.offer{display:grid;grid-template-columns:76px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#0d1726}.offer img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:9px}.offer h3{font-size:14px;line-height:1.35;margin:0 0 7px}.offer-price{font-size:18px;font-weight:800;color:var(--accent)}.offer-meta{font-size:12px;color:var(--muted);margin-top:4px}.offer a{color:#8bc9ff;font-size:13px}.empty{padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:13px}@media(max-width:420px){.grid{grid-template-columns:1fr}.offer{grid-template-columns:64px 1fr}.offer img{width:64px;height:64px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -16,7 +16,7 @@
 <label for="term">Produto ou palavra-chave</label><input id="term" maxlength="120" placeholder="Ex.: memória RAM DDR4 8GB">
 <div class="grid"><div><label for="price">Preço máximo total (R$)</label><input id="price" type="number" min="0" step="0.01" placeholder="400"></div><div><label for="installments">Parcelas máximas</label><select id="installments"><option value="1">1</option><option value="3">3</option><option value="6">6</option><option value="10" selected>10</option><option value="12">12</option><option value="18">18</option><option value="24">24</option></select></div></div>
 <button id="save" type="button" disabled>Salvar configurações na nuvem</button><p id="feedback" class="hint" aria-live="polite">Aguarde a conexão com o Supabase.</p></section>
-<section class="card"><div class="section-head"><h2>Ofertas encontradas</h2><button id="refresh" type="button" disabled>Atualizar</button></div><p id="offers-status" class="hint" aria-live="polite">As ofertas salvas aparecerão aqui após uma coleta válida.</p><div id="offers" class="offers"><div class="empty">Nenhuma oferta carregada.</div></div></section>
+<section class="card"><div class="section-head"><h2>Ofertas encontradas</h2></div><div class="action-row"><button id="scan" type="button" disabled>Buscar ofertas agora</button><button id="refresh" type="button" disabled>Atualizar lista</button></div><p id="offers-status" class="hint" aria-live="polite">As ofertas salvas aparecerão aqui após uma coleta válida.</p><div id="offers" class="offers"><div class="empty">Nenhuma oferta carregada.</div></div></section>
 <p class="hint">As configurações ficam vinculadas à sua sessão anônima neste navegador. Use o mesmo navegador para acessá-las novamente.</p>
 <footer>Radar de Promoções · integração inicial</footer></main>
 <script>
@@ -84,6 +84,22 @@
      list.append(card);
    }
  }
+ async function runScan(){
+   if(!userId) return;
+   $("scan").disabled=true;
+   $("offers-status").textContent="Consultando o Mercado Livre... isso pode levar alguns segundos.";
+   try{
+     const {data,error}=await client.functions.invoke("scan-offers",{body:{}});
+     if(error) throw error;
+     const details=[...(data.errors||[]),...(data.diagnostics||[])];
+     $("offers-status").textContent=
+       `Busca ${data.status==="completed"?"concluída":"concluída com avisos"}: ${data.items_checked} anúncios analisados, ${data.offers_saved} ofertas salvas.`+
+       (details.length?" "+details.join(" "):"");
+     await loadOffers();
+   }catch(error){
+     $("offers-status").textContent="Não foi possível executar a busca: "+(error.message||"verifique se a função está publicada.");
+   }finally{$("scan").disabled=false;}
+ }
  async function loadOffers(){
    if(!userId) return;
    $("refresh").disabled=true;
@@ -120,6 +136,7 @@
      $("connection").textContent="Conectado ao Supabase";
      $("save").disabled=false;
      $("refresh").disabled=false;
+     $("scan").disabled=false;
      message(data?"Configurações carregadas da nuvem.":"Conectado! Defina sua busca e salve na nuvem.");
      await loadOffers();
    }catch(error){
@@ -128,6 +145,7 @@
    }
  }
  $("refresh").addEventListener("click",loadOffers);
+ $("scan").addEventListener("click",runScan);
  $("save").addEventListener("click",async()=>{
    if(!userId){message("A conexão ainda não está pronta. Atualize a página e tente novamente.");return;}
    const term=$("term").value.trim();

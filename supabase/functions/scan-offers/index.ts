@@ -111,8 +111,12 @@ Deno.serve(async (req: Request) => {
     return Response.json({ error: "Method not allowed" }, { status: 405, headers: corsHeaders });
   }
 
+  const authorization = req.headers.get("authorization") ?? "";
+  const bearerToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  const isCronRequest = Boolean(cronSecret && bearerToken === cronSecret);
+
+  if (!bearerToken) {
     return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
   }
 
@@ -126,9 +130,22 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: configs, error: configError } = await admin
+  // Scheduled requests use the private CRON_SECRET. Manual requests must carry
+  // a valid Supabase user JWT and are restricted to that user's own configuration.
+  let requestedUserId: string | null = null;
+  if (!isCronRequest) {
+    const { data: authData, error: authError } = await admin.auth.getUser(bearerToken);
+    if (authError || !authData.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+    }
+    requestedUserId = authData.user.id;
+  }
+
+  let configQuery = admin
     .from("search_configs")
     .select("user_id, term, max_price, max_installments");
+  if (requestedUserId) configQuery = configQuery.eq("user_id", requestedUserId);
+  const { data: configs, error: configError } = await configQuery;
 
   if (configError) {
     return Response.json({ error: "Could not load search configurations" }, { status: 500, headers: corsHeaders });
@@ -253,6 +270,7 @@ Deno.serve(async (req: Request) => {
 
   return Response.json({
     status: errors.length ? "completed_with_warnings" : "completed",
+    run_mode: isCronRequest ? "scheduled" : "manual",
     sources: ["mercado_livre"],
     configurations_found: configs?.length ?? 0,
     items_checked: checked,
