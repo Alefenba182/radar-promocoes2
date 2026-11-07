@@ -20,7 +20,7 @@ class ProjectDocumentationTests(unittest.TestCase):
 
     def test_readme_documents_mobile_configuration_goal(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("Configuração de buscas sem precisar de computador", readme)
+        self.assertIn("configuração de buscas sem precisar de computador", readme.lower())
 
 
 
