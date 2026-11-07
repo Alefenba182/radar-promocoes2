@@ -9,6 +9,7 @@ Painel móvel para configuração de buscas sem precisar de computador e acompan
 - Configuração de palavra-chave, preço máximo e quantidade máxima de parcelas.
 - Conexão OAuth do Mercado Livre feita no servidor, com tokens protegidos.
 - Exibição de ofertas salvas no banco, incluindo preço total, parcelas, imagem e link.
+- Busca manual iniciada pelo próprio painel, com JWT validado no servidor e acesso restrito às configurações do usuário.
 - Edge Function de coleta com renovação do token OAuth, filtros de frete grátis e limite de preço.
 - Diagnóstico separado para distinguir falhas de autenticação de bloqueios no endpoint de busca.
 - Script para agendar a coleta a cada 15 minutos usando pg_cron, pg_net e Supabase Vault.
@@ -16,7 +17,7 @@ Painel móvel para configuração de buscas sem precisar de computador e acompan
 
 ## O que ainda depende de ativação/validação
 
-1. Publicar a versão mais recente de `supabase/functions/scan-offers/index.ts` no Supabase.
+1. Publicar a versão mais recente de `supabase/functions/scan-offers/index.ts` no Supabase. Isso habilita a busca manual pelo painel e a futura chamada agendada.
 2. Executar `supabase/schedule-scan.sql` no SQL Editor, substituindo o marcador pelo mesmo valor de `CRON_SECRET` já cadastrado nas Edge Functions. O segredo não deve ser enviado ao GitHub nem ao chat.
 3. Confirmar que o Mercado Livre permite a busca autenticada para esta aplicação. A última execução retornou HTTP 403; a nova versão da função registra separadamente o resultado de `/users/me` e os detalhes seguros do erro de busca.
 4. Integrar e validar as APIs oficiais de Amazon e Shopee. Elas ainda não são fontes ativas e não devem ser apresentadas como se já estivessem coletando.
