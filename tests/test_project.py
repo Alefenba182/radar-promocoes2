@@ -55,6 +55,14 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn('configQuery.eq("user_id", requestedUserId)', scanner)
         self.assertIn('bearerToken === cronSecret', scanner)
 
+    def test_scanner_has_catalog_fallback_for_general_search_403(self):
+        scanner = (ROOT / "supabase/functions/scan-offers/index.ts").read_text(encoding="utf-8")
+        self.assertIn("searchCatalogOffers", scanner)
+        self.assertIn("https://api.mercadolibre.com/products/search", scanner)
+        self.assertIn("/items", scanner)
+        self.assertIn('source = "mercado_livre_catalog"', scanner)
+        self.assertIn("response.status === 403", scanner)
+
     def test_scheduler_is_configured_for_fifteen_minutes(self):
         scheduler = (ROOT / "supabase/schedule-scan.sql").read_text(encoding="utf-8")
         self.assertIn("'*/15 * * * *'", scheduler)
