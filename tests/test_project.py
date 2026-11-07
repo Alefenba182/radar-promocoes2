@@ -29,6 +29,9 @@ class DashboardFeatureTests(unittest.TestCase):
         dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn("dynamic-function?action=start", dashboard)
         self.assertIn("Conectar Mercado Livre", dashboard)
+        self.assertIn('id="ml-connection"', dashboard)
+        self.assertIn("refreshMercadoLivreStatus", dashboard)
+        self.assertNotIn('target="_blank"', dashboard)
 
     def test_dashboard_loads_and_renders_saved_offers(self):
         dashboard = (ROOT / "index.html").read_text(encoding="utf-8")

@@ -27,3 +27,4 @@ jobs:
             exit 1
           fi
           supabase functions deploy scan-offers --project-ref vektbwbqgffonwngvvkq --yes
+          supabase functions deploy mercadolivre-oauth --project-ref vektbwbqgffonwngvvkq --no-verify-jwt --yes

@@ -34,6 +34,12 @@ Deno.serve(async (req: Request) => {
   });
   const requestUrl = new URL(req.url);
 
+  if (requestUrl.searchParams.get("action") === "status") {
+    const { data: configs } = await admin.from("search_configs").select("user_id").limit(1);
+    if (!configs?.length) return Response.json({ connected: false }, { headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
+    const { data: token } = await admin.from("mercadolivre_tokens").select("user_id").eq("user_id", configs[0].user_id).maybeSingle();
+    return Response.json({ connected: Boolean(token) }, { headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
+  }
   if (requestUrl.searchParams.get("action") === "start") {
     const stateBytes = crypto.getRandomValues(new Uint8Array(32));
     const state = Array.from(stateBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -148,5 +154,7 @@ Deno.serve(async (req: Request) => {
     return html("Falha ao salvar conexão", "A autorização foi recebida, mas não foi possível salvar a conexão. Tente novamente.", 500);
   }
 
-  return html("Mercado Livre conectado!", "A autorização foi concluída e a conexão foi salva com segurança.");
+  const returnUrl = new URL(redirectUri);
+  returnUrl.searchParams.set("ml_connected", "1");
+  return Response.redirect(returnUrl.toString(), 302);
 });
