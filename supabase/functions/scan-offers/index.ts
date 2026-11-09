@@ -1,3 +1,4 @@
+import { storeAdapters } from "../_shared/store-adapters.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -399,6 +400,7 @@ Deno.serve(async (req: Request) => {
     status: errors.length ? "completed_with_warnings" : "completed",
     run_mode: isCronRequest ? "scheduled" : "manual",
     sources: ["mercado_livre"],
+    store_integrations: storeAdapters.map(({ key, label, status, note }) => ({ key, label, status, note })),
     configurations_found: configs?.length ?? 0,
     items_checked: checked,
     offers_saved: saved,

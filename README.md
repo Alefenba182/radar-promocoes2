@@ -16,6 +16,13 @@ Painel móvel para configuração de buscas sem precisar de computador e acompan
 - Script para agendar a coleta a cada 15 minutos usando pg_cron, pg_net e Supabase Vault.
 - Testes automatizados no GitHub Actions.
 
+## Arquitetura de conectores de lojas
+
+- Camada compartilhada em `supabase/functions/_shared/store-adapters.ts` para padronizar produtos, validar URLs por domínio e descrever o estado de cada integração.
+- Conectores planejados: KaBuM!, Pichau e Terabyte. Nesta etapa eles ficam explicitamente como **pendentes de uma fonte de dados autorizada**; ainda não consultam nem simulam ofertas.
+- O painel identifica a loja de origem de cada oferta, preparando a exibição conjunta de múltiplos marketplaces.
+- A API oficial documentada do KaBuM! é voltada à operação de sellers/Mirakl e exige cadastro e credenciais de integração; não será usada como API de pesquisa de comprador.
+
 ## O que ainda depende de ativação/validação
 
 1. Publicar a versão mais recente de `supabase/functions/scan-offers/index.ts` no Supabase. Isso habilita a busca manual pelo painel e a futura chamada agendada.

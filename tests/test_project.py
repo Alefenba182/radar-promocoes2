@@ -96,6 +96,20 @@ class DashboardFeatureTests(unittest.TestCase):
         self.assertIn('.in("source", ["mercado_livre", "mercado_livre_catalog"])', scanner)
         self.assertLess(scanner.index('.delete()'), scanner.index('admin.from("offers").upsert(offers'))
 
+    def test_store_adapter_layer_is_explicit_and_does_not_fake_sources(self):
+        adapters = (ROOT / "supabase/functions/_shared/store-adapters.ts").read_text(encoding="utf-8")
+        self.assertIn('"kabum"', adapters)
+        self.assertIn('"pichau"', adapters)
+        self.assertIn('"terabyte"', adapters)
+        self.assertIn("awaiting_authorized_source", adapters)
+        self.assertIn("normalizeStoreOffer", adapters)
+
+    def test_dashboard_displays_offer_source(self):
+        dashboard = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('select("source,title,total_price', dashboard)
+        self.assertIn('offer-source', dashboard)
+        self.assertIn('kabum:"KaBuM!"', dashboard)
+
     def test_scheduler_is_configured_for_fifteen_minutes(self):
         scheduler = (ROOT / "supabase/schedule-scan.sql").read_text(encoding="utf-8")
         self.assertIn("'*/15 * * * *'", scheduler)
